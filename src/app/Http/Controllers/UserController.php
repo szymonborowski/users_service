@@ -74,6 +74,24 @@ class UserController extends Controller
         return new UserResource($user);
     }
 
+    public function showById(int $id): JsonResponse
+    {
+        $user = UserModel::find($id);
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'User not found',
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'created_at' => $user->created_at?->toISOString(),
+        ], Response::HTTP_OK);
+    }
+
     #[OA\Post(
         path: '/api/users',
         summary: 'Create new user',
@@ -97,14 +115,26 @@ class UserController extends Controller
             )
         ]
     )]
-    public function store(): JsonResponse
+    public function store(Request $request): JsonResponse
     {
-        $user = new UserModel(request()->all());
-        $user->save();
+        $data = json_decode($request->getContent(), true) ?? [];
+
+        $validated = validator($data, [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8'],
+        ])->validate();
+
+        $user = UserModel::create($validated);
 
         UserDataChanged::dispatch($user, 'created');
 
-        return response()->json($user, Response::HTTP_CREATED);
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'created_at' => $user->created_at?->toISOString(),
+        ], Response::HTTP_CREATED);
     }
 
     #[OA\Put(
@@ -168,8 +198,8 @@ class UserController extends Controller
     }
 
     #[OA\Post(
-        path: '/api/users/authorize',
-        summary: 'Authorize user by email and password',
+        path: '/api/auth/check',
+        summary: 'Validate user credentials',
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
@@ -180,23 +210,25 @@ class UserController extends Controller
                 ]
             )
         ),
-        tags: ['Users'],
+        tags: ['Auth'],
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'Authorized',
+                description: 'Credentials valid',
                 content: new OA\JsonContent(
                     properties: [
-                        new OA\Property(property: 'authorised', type: 'boolean', example: true),
+                        new OA\Property(property: 'authorized', type: 'boolean', example: true),
+                        new OA\Property(property: 'user', ref: '#/components/schemas/User'),
                     ]
                 )
             ),
             new OA\Response(
-                response: 403,
-                description: 'Unauthorized',
+                response: 401,
+                description: 'Invalid credentials',
                 content: new OA\JsonContent(
                     properties: [
-                        new OA\Property(property: 'authorised', type: 'boolean', example: false),
+                        new OA\Property(property: 'authorized', type: 'boolean', example: false),
+                        new OA\Property(property: 'message', type: 'string', example: 'Invalid credentials'),
                     ]
                 )
             )
@@ -204,21 +236,28 @@ class UserController extends Controller
     )]
     public function authorize(Request $request): JsonResponse
     {
-        $responseData['authorised'] = false;
-        $status = Response::HTTP_FORBIDDEN;
-
         $request->validate([
-            'email' => ['required', 'email:rfc,dns'],
-            'password' => ['required', Password::min(8)->letters()->mixedCase()->numbers()->symbols()]],
-        );
+            'email' => ['required', 'email'],
+            'password' => ['required'],
+        ]);
 
-        $user = UserModel::query()->where('email', $request->query('email'))->first();
+        $user = UserModel::query()->where('email', $request->input('email'))->first();
 
-        if ($user->email && Hash::check($request->query('password'), $user->password)) {
-            $responseData['authorised'] = true;
-            $status = Response::HTTP_OK;
+        if (!$user || !Hash::check($request->input('password'), $user->password)) {
+            return response()->json([
+                'authorized' => false,
+                'message' => 'Invalid credentials',
+            ], Response::HTTP_UNAUTHORIZED);
         }
 
-        return response()->json($responseData, $status);
+        return response()->json([
+            'authorized' => true,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'created_at' => $user->created_at?->toISOString(),
+            ],
+        ], Response::HTTP_OK);
     }
 }
