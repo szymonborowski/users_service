@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(
             TrustProxies::class,
         );
+        $middleware->alias([
+            'scope' => \Laravel\Passport\Http\Middleware\CheckForAnyScope::class,
+            'scopes' => \Laravel\Passport\Http\Middleware\CheckScopes::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

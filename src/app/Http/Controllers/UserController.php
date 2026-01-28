@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\UserDataChanged;
 use App\Http\Resources\UserResource;
 use App\Models\User as UserModel;
 use Illuminate\Http\JsonResponse;
@@ -101,6 +102,8 @@ class UserController extends Controller
         $user = new UserModel(request()->all());
         $user->save();
 
+        UserDataChanged::dispatch($user, 'created');
+
         return response()->json($user, Response::HTTP_CREATED);
     }
 
@@ -133,6 +136,9 @@ class UserController extends Controller
     public function update(UserModel $user): JsonResponse
     {
         UserModel::query()->where('id', $user->id)->update(request()->all());
+
+        $user->refresh();
+        UserDataChanged::dispatch($user, 'updated');
 
         return response()->json(null, Response::HTTP_OK);
     }

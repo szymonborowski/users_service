@@ -9,14 +9,6 @@ services:
         UID: ${UID}
         GID: ${GID}
     command: php-fpm
-    environment:
-      DB_HOST: users-db
-      DB_CONNECTION: ${DB_CONNECTION}
-      DB_PORT: ${DB_PORT}
-      DB_DATABASE: ${DB_DATABASE}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
     volumes:
       - ./src:/var/www/html
     depends_on:
@@ -25,6 +17,7 @@ services:
       - "9000"
     networks:
       - users-internal
+      - web
 
   users-nginx:
     container_name: users-nginx
