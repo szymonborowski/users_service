@@ -4,6 +4,7 @@ namespace App\Models;
 
 //use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -57,5 +58,39 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class)->withTimestamps();
+    }
+
+    public function hasRole(string $roleName): bool
+    {
+        return $this->roles()->where('name', $roleName)->exists();
+    }
+
+    public function hasAnyRole(array $roleNames): bool
+    {
+        return $this->roles()->whereIn('name', $roleNames)->exists();
+    }
+
+    public function assignRole(string $roleName): void
+    {
+        $role = Role::where('name', $roleName)->firstOrFail();
+        $this->roles()->syncWithoutDetaching([$role->id]);
+    }
+
+    public function removeRole(string $roleName): void
+    {
+        $role = Role::where('name', $roleName)->first();
+        if ($role) {
+            $this->roles()->detach($role->id);
+        }
+    }
+
+    public function getHighestRole(): ?Role
+    {
+        return $this->roles()->orderByDesc('level')->first();
     }
 }

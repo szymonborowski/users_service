@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\UserDataChanged;
 use App\Http\Resources\UserResource;
+use App\Models\Role;
 use App\Models\User as UserModel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -76,7 +77,7 @@ class UserController extends Controller
 
     public function showById(int $id): JsonResponse
     {
-        $user = UserModel::find($id);
+        $user = UserModel::with('roles')->find($id);
 
         if (!$user) {
             return response()->json([
@@ -88,8 +89,53 @@ class UserController extends Controller
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'roles' => $user->roles->pluck('name')->toArray(),
             'created_at' => $user->created_at?->toISOString(),
         ], Response::HTTP_OK);
+    }
+
+    public function updateById(int $id, Request $request): JsonResponse
+    {
+        $user = UserModel::with('roles')->find($id);
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'User not found',
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        $validated = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'email' => ['sometimes', 'email', 'unique:users,email,' . $id],
+        ]);
+
+        $user->update($validated);
+        $user->refresh();
+
+        UserDataChanged::dispatch($user, 'updated');
+
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'roles' => $user->roles->pluck('name')->toArray(),
+            'created_at' => $user->created_at?->toISOString(),
+        ], Response::HTTP_OK);
+    }
+
+    public function destroyById(int $id): JsonResponse
+    {
+        $user = UserModel::find($id);
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'User not found',
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        $user->delete();
+
+        return response()->json(null, Response::HTTP_NO_CONTENT);
     }
 
     #[OA\Post(
@@ -127,12 +173,18 @@ class UserController extends Controller
 
         $user = UserModel::create($validated);
 
+        $defaultRole = Role::where('name', Role::READER)->first();
+        if ($defaultRole) {
+            $user->roles()->attach($defaultRole);
+        }
+
         UserDataChanged::dispatch($user, 'created');
 
         return response()->json([
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'roles' => $user->roles->pluck('name')->toArray(),
             'created_at' => $user->created_at?->toISOString(),
         ], Response::HTTP_CREATED);
     }
@@ -241,7 +293,7 @@ class UserController extends Controller
             'password' => ['required'],
         ]);
 
-        $user = UserModel::query()->where('email', $request->input('email'))->first();
+        $user = UserModel::with('roles')->where('email', $request->input('email'))->first();
 
         if (!$user || !Hash::check($request->input('password'), $user->password)) {
             return response()->json([
@@ -256,6 +308,7 @@ class UserController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'roles' => $user->roles->pluck('name')->toArray(),
                 'created_at' => $user->created_at?->toISOString(),
             ],
         ], Response::HTTP_OK);
