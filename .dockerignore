@@ -1,0 +1,36 @@
+# Version control
+.git
+.gitignore
+
+# Environment files (secrets must not be baked into image)
+.env
+.env.*
+!.env.example
+
+# Dependencies (rebuilt inside image)
+**/node_modules
+**/vendor
+
+# Docker dev configs (not needed for deploy build)
+docker/dev
+
+# IDE and editor
+.idea
+.vscode
+.editorconfig
+
+# Documentation
+*.md
+
+# Tests
+src/tests
+src/phpunit.xml
+
+# Logs and cache (should be empty in image)
+src/storage/logs/*
+src/storage/framework/cache/*
+src/storage/framework/sessions/*
+src/storage/framework/views/*
+
+# Certificates (use secrets management instead)
+src/certs

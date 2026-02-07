@@ -1,53 +1,88 @@
 # =========================================================
-# 1 Frontend build (Vite)
+# Stage 1: Frontend build (Vite)
 # =========================================================
 FROM node:22-alpine AS build-frontend
 
 WORKDIR /app
 
-# kopiujemy tylko pliki potrzebne do instalacji zależności
 COPY src/package.json src/package-lock.json ./
-RUN npm ci
+RUN npm ci --no-audit
 
-# kopiujemy pliki frontendu
-COPY src/certs/* ./certs/
 COPY src/resources ./resources
 COPY src/vite.config.* ./
 
-# build assetów
 RUN npm run build
 
 
 # =========================================================
-# 2 PHP Runtime
+# Stage 2: PHP base with extensions
 # =========================================================
-FROM php:8.5-fpm AS php-runtime
+FROM php:8.5-fpm-alpine AS php-base
 
-ARG UID=1000
-ARG GID=1000
+RUN apk add --no-cache \
+        libpng \
+        libzip \
+        icu-libs \
+        oniguruma \
+    && apk add --no-cache --virtual .build-deps \
+        libpng-dev \
+        libzip-dev \
+        icu-dev \
+        oniguruma-dev \
+        libxml2-dev \
+    && docker-php-ext-install -j"$(nproc)" \
+        pdo_mysql mbstring zip exif pcntl bcmath intl sockets \
+    && apk del .build-deps \
+    && rm -rf /tmp/*
 
-RUN groupadd -g ${GID} app \
- && useradd -u ${UID} -g app -m app
 
-RUN apt-get update && apt-get install -y \
-    git zip unzip curl libpng-dev libonig-dev libxml2-dev libzip-dev libicu-dev \
-    && docker-php-ext-install pdo_mysql mbstring zip exif pcntl bcmath intl
+# =========================================================
+# Stage 3: Composer dependencies
+# =========================================================
+FROM php-base AS build-composer
 
+RUN apk add --no-cache git unzip
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
-
 COPY ./src .
 
+RUN composer install \
+    --no-dev \
+    --optimize-autoloader \
+    --no-interaction \
+    --no-ansi
+
+
+# =========================================================
+# Stage 4: Production runtime
+# =========================================================
+FROM php-base AS php-runtime
+
+LABEL org.opencontainers.image.title="users-service" \
+      org.opencontainers.image.authors="decybell" \
+      org.opencontainers.image.source="https://github.com/decybell/portfolio"
+
+# PHP-FPM healthcheck endpoint
+RUN printf '[www]\nping.path = /ping\nping.response = pong\n' \
+    > /usr/local/etc/php-fpm.d/zz-healthcheck.conf
+
+WORKDIR /var/www/html
+
+COPY --from=build-composer /var/www/html .
 COPY --from=build-frontend /app/public/build ./public/build
 
-RUN composer install --no-dev --optimize-autoloader
-
-RUN chown -R www-data:www-data storage bootstrap/cache
-
-RUN php artisan view:clear \
+RUN chown -R www-data:www-data storage bootstrap/cache \
+ && php artisan view:clear \
  && php artisan config:clear \
  && php artisan route:clear
 
-USER app
+EXPOSE 9000
+
+STOPSIGNAL SIGQUIT
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD php -r 'exit(0);' || exit 1
+
+USER www-data
