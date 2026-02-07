@@ -77,9 +77,9 @@ spec:
             periodSeconds: 10
           readinessProbe:
             httpGet:
-              path: /health
+              path: /ready
               port: 80
-            initialDelaySeconds: 3
+            initialDelaySeconds: 5
             periodSeconds: 5
           resources:
             requests:
