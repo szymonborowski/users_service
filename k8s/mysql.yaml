@@ -1,0 +1,95 @@
+# WARNING: This Secret contains placeholder values.
+# In production, create this secret via kubectl, Sealed Secrets, or External Secrets Operator.
+# Do NOT commit real credentials to the repository.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: users-mysql-secret
+  namespace: portfolio
+  labels:
+    app.kubernetes.io/name: users-mysql
+    app.kubernetes.io/part-of: portfolio
+type: Opaque
+stringData:
+  MYSQL_DATABASE: "users"
+  MYSQL_USER: "users"
+  MYSQL_PASSWORD: "CHANGE_ME"
+  MYSQL_ROOT_PASSWORD: "CHANGE_ME"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: users-mysql
+  namespace: portfolio
+  labels:
+    app.kubernetes.io/name: users-mysql
+    app.kubernetes.io/part-of: portfolio
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: 3306
+  selector:
+    app.kubernetes.io/name: users-mysql
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: users-mysql
+  namespace: portfolio
+  labels:
+    app.kubernetes.io/name: users-mysql
+    app.kubernetes.io/part-of: portfolio
+spec:
+  serviceName: users-mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: users-mysql
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: users-mysql
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: mysql
+          image: mysql:8
+          ports:
+            - containerPort: 3306
+              name: mysql
+          envFrom:
+            - secretRef:
+                name: users-mysql-secret
+          livenessProbe:
+            exec:
+              command: ["mysqladmin", "ping", "-h", "localhost"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command: ["mysqladmin", "ping", "-h", "localhost"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi

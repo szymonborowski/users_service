@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: users-config
+  namespace: portfolio
+  labels:
+    app.kubernetes.io/name: users
+    app.kubernetes.io/part-of: portfolio
+data:
+  APP_NAME: "Users"
+  APP_ENV: "production"
+  APP_DEBUG: "false"
+  APP_URL: "http://users"
+  LOG_CHANNEL: "stderr"
+  DB_CONNECTION: "mysql"
+  DB_HOST: "users-mysql"
+  DB_PORT: "3306"
+  RABBITMQ_HOST: "rabbitmq"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_VHOST: "/"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: users-nginx-config
+  namespace: portfolio
+  labels:
+    app.kubernetes.io/name: users
+    app.kubernetes.io/component: nginx
+    app.kubernetes.io/part-of: portfolio
+data:
+  default.conf: |
+    server {
+        listen 80;
+        server_name _;
+        root /var/www/html/public;
+        index index.php;
+
+        location /health {
+            access_log off;
+            return 200 'ok';
+            add_header Content-Type text/plain;
+        }
+
+        location / {
+            try_files $uri $uri/ /index.php?$query_string;
+        }
+
+        location ~ \.php$ {
+            fastcgi_pass 127.0.0.1:9000;
+            fastcgi_index index.php;
+            fastcgi_param SCRIPT_FILENAME /var/www/html/public$fastcgi_script_name;
+            include fastcgi_params;
+        }
+
+        location ~ /\.(?!well-known).* {
+            deny all;
+        }
+    }
