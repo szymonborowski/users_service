@@ -62,10 +62,11 @@ class UserApiRabbitMQTest extends TestCase
 
         Event::fake([UserDataChanged::class]);
 
-        $user->update(['name' => 'Updated Name']);
-        $user->refresh();
+        $response = $this->putJson("/api/users/{$user->id}", [
+            'name' => 'Updated Name',
+        ]);
 
-        UserDataChanged::dispatch($user, 'updated');
+        $response->assertOk();
 
         Event::assertDispatched(UserDataChanged::class, function ($event) use ($user) {
             return $event->action === 'updated'
@@ -147,10 +148,7 @@ class UserApiRabbitMQTest extends TestCase
 
         $this->app->instance(RabbitMQService::class, $mockRabbitMQ);
 
-        $user->update(['name' => 'New Name']);
-        $user->refresh();
-
-        UserDataChanged::dispatch($user, 'updated');
+        $this->putJson("/api/users/{$user->id}", ['name' => 'New Name']);
 
         $this->assertEquals('updated', $publishedData['action']);
         $this->assertEquals('New Name', $publishedData['user']['name']);

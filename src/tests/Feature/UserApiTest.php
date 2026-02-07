@@ -69,7 +69,7 @@ class UserApiTest extends TestCase
         $payload = [
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'password' => bcrypt('password'),
+            'password' => 'Password123!',
         ];
 
         $response = $this->postJson('/api/users', $payload);
@@ -97,6 +97,11 @@ class UserApiTest extends TestCase
         $response = $this->putJson("/api/users/{$user->id}", $payload);
 
         $response->assertOk();
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'name' => 'Updated Name',
+        ]);
     }
 
     #[Test]
