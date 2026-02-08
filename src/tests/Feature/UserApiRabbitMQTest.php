@@ -19,7 +19,11 @@ class UserApiRabbitMQTest extends TestCase
     {
         parent::setUp();
 
-        $this->withoutMiddleware();
+        // Disable only auth so route model binding (SubstituteBindings) still runs for PUT /users/{user}
+        $this->withoutMiddleware([
+            \Illuminate\Auth\Middleware\Authenticate::class,
+            \Laravel\Passport\Http\Middleware\CheckForAnyScope::class,
+        ]);
 
         $mockRabbitMQ = Mockery::mock(RabbitMQService::class);
         $mockRabbitMQ->shouldReceive('publish')->andReturn(null);
