@@ -5,8 +5,8 @@ FROM node:22-alpine AS build-frontend
 
 WORKDIR /app
 
-COPY src/package.json src/package-lock.json ./
-RUN npm ci --no-audit
+COPY src/package.json ./
+RUN npm install --no-audit
 
 COPY src/resources ./resources
 COPY src/vite.config.* ./
@@ -30,6 +30,7 @@ RUN apk add --no-cache \
         icu-dev \
         oniguruma-dev \
         libxml2-dev \
+        linux-headers \
     && docker-php-ext-install -j"$(nproc)" \
         pdo_mysql mbstring zip exif pcntl bcmath intl sockets \
     && apk del .build-deps \
