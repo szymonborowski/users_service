@@ -18,6 +18,8 @@ data:
   RABBITMQ_HOST: "rabbitmq"
   RABBITMQ_PORT: "5672"
   RABBITMQ_VHOST: "/"
+  # Internal API key for service-to-service communication
+  INTERNAL_API_KEY: "internal-api-key-change-in-production"
 ---
 apiVersion: v1
 kind: ConfigMap
