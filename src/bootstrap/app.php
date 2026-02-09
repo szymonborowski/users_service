@@ -17,8 +17,8 @@ return Application::configure(basePath: dirname(__DIR__))
             TrustProxies::class,
         );
         $middleware->alias([
-            'scope' => \Laravel\Passport\Http\Middleware\CheckForAnyScope::class,
-            'scopes' => \Laravel\Passport\Http\Middleware\CheckScopes::class,
+            'scope' => \Laravel\Passport\Http\Middleware\CheckTokenForAnyScope::class,
+            'scopes' => \Laravel\Passport\Http\Middleware\CheckToken::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

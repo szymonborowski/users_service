@@ -19,7 +19,7 @@ class UserApiTest extends TestCase
 
         $this->withoutMiddleware([
             \Illuminate\Auth\Middleware\Authenticate::class,
-            \Laravel\Passport\Http\Middleware\CheckForAnyScope::class,
+            \Laravel\Passport\Http\Middleware\CheckTokenForAnyScope::class,
         ]);
 
         $mockRabbitMQ = Mockery::mock(RabbitMQService::class);
