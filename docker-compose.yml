@@ -30,6 +30,12 @@ services:
     volumes:
       - ./src:/var/www/html
       - ./docker/dev/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.users.rule=Host(`users.microservices.local`)"
+      - "traefik.http.routers.users.entrypoints=websecure"
+      - "traefik.http.routers.users.tls=true"
+      - "traefik.http.services.users.loadbalancer.server.port=80"
     depends_on:
       users-app:
         condition: service_started
@@ -41,6 +47,7 @@ services:
       start_period: 10s
     networks:
       - users-internal
+      - web
       - microservices
 
   users-db:
@@ -67,6 +74,8 @@ services:
 networks:
   users-internal:
     driver: bridge
+  web:
+    external: true
   microservices:
     external: true
 

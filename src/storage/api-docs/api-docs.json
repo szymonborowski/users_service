@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "Users API",
-        "description": "API do zarządzania użytkownikami",
+        "description": "API for managing users",
         "version": "1.0.0"
     },
     "servers": [
@@ -12,6 +12,165 @@
         }
     ],
     "paths": {
+        "/api/roles": {
+            "get": {
+                "tags": [
+                    "Roles"
+                ],
+                "summary": "List all roles",
+                "operationId": "77e3636d8592997ce9d6d27b50857a69",
+                "responses": {
+                    "200": {
+                        "description": "List of roles",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "id": {
+                                                "type": "integer"
+                                            },
+                                            "name": {
+                                                "type": "string"
+                                            },
+                                            "description": {
+                                                "type": "string"
+                                            },
+                                            "level": {
+                                                "type": "integer"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/users/{userId}/roles": {
+            "get": {
+                "tags": [
+                    "Roles"
+                ],
+                "summary": "Get user roles",
+                "operationId": "a22f8eba5b310cff0d993ec6bf1ebe51",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User roles",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "roles": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Roles"
+                ],
+                "summary": "Assign role to user",
+                "operationId": "2c3c0d74d7bc5ea79747305827d16218",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "role"
+                                ],
+                                "properties": {
+                                    "role": {
+                                        "type": "string",
+                                        "example": "author"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Role assigned"
+                    },
+                    "404": {
+                        "description": "User or role not found"
+                    }
+                }
+            }
+        },
+        "/api/users/{userId}/roles/{roleName}": {
+            "delete": {
+                "tags": [
+                    "Roles"
+                ],
+                "summary": "Remove role from user",
+                "operationId": "4365d6e5bcfc0ec480ef4f9031671c1a",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "roleName",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Role removed"
+                    },
+                    "404": {
+                        "description": "User or role not found"
+                    }
+                }
+            }
+        },
         "/api/users": {
             "get": {
                 "tags": [
@@ -19,6 +178,25 @@
                 ],
                 "summary": "List users",
                 "operationId": "c457726701591d1183b53aa71fc13441",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Paginated list of users",
@@ -37,68 +215,28 @@
                                 }
                             }
                         }
-                    }
-                }
-            },
-            "post": {
-                "tags": [
-                    "Users"
-                ],
-                "summary": "Create new user",
-                "operationId": "592819a0265360b2014512d6dbfaf0e7",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "name",
-                                    "email",
-                                    "password"
-                                ],
-                                "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "example": "John Doe"
-                                    },
-                                    "email": {
-                                        "type": "string",
-                                        "example": "john@example.com"
-                                    },
-                                    "password": {
-                                        "type": "string",
-                                        "example": "P@ssw0rd!"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
                     }
                 },
-                "responses": {
-                    "201": {
-                        "description": "User created",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/User"
-                                }
-                            }
-                        }
+                "security": [
+                    {
+                        "bearerAuth": []
                     }
-                }
+                ]
             }
         },
-        "/api/users/{id}": {
+        "/api/users/{user}": {
             "get": {
                 "tags": [
                     "Users"
                 ],
-                "summary": "Get user",
-                "operationId": "36a33ff774d5cba33c039dec2c3e0287",
+                "summary": "Show a user",
+                "operationId": "d3a14968f8b7a072620c75c7c78ed6f8",
                 "parameters": [
                     {
-                        "name": "id",
+                        "name": "user",
                         "in": "path",
                         "required": true,
                         "schema": {
@@ -108,31 +246,37 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "User",
+                        "description": "User details",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/components/schemas/User"
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/User"
                                 }
                             }
                         }
+                    },
+                    "404": {
+                        "description": "User not found"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "put": {
                 "tags": [
                     "Users"
                 ],
-                "summary": "Update user",
-                "operationId": "b9091397c8b25f12c6adb74be6ce3a5a",
+                "summary": "Update a user",
+                "operationId": "e29fc231c7937ab09483d35e6e3d1214",
                 "parameters": [
                     {
-                        "name": "id",
+                        "name": "user",
                         "in": "path",
                         "required": true,
                         "schema": {
@@ -148,11 +292,15 @@
                                 "properties": {
                                     "name": {
                                         "type": "string",
-                                        "example": "Updated Name"
+                                        "maxLength": 255
                                     },
                                     "email": {
                                         "type": "string",
-                                        "example": "updated@example.com"
+                                        "format": "email"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "minLength": 8
                                     }
                                 },
                                 "type": "object"
@@ -166,18 +314,29 @@
                     },
                     "404": {
                         "description": "User not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "delete": {
                 "tags": [
                     "Users"
                 ],
-                "summary": "Delete user",
-                "operationId": "fa56cffde745d3f152f95cbacd936c0b",
+                "summary": "Delete a user",
+                "operationId": "e0f9a385a1d6788b99e519bd98cf7239",
                 "parameters": [
                     {
-                        "name": "id",
+                        "name": "user",
                         "in": "path",
                         "required": true,
                         "schema": {
@@ -191,17 +350,120 @@
                     },
                     "404": {
                         "description": "User not found"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
-        "/api/users/authorize": {
+        "/api/internal/users/{id}": {
+            "get": {
+                "tags": [
+                    "Users (Internal)"
+                ],
+                "summary": "Show a user by ID (internal)",
+                "operationId": "ed7bb2ff60fe37514179a7ce1a75b34c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User details"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "internalApiKey": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Users (Internal)"
+                ],
+                "summary": "Update a user by ID (internal)",
+                "operationId": "8f8c51a7d18c49c24b723b3c627a95fa",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "minLength": 8
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "User updated"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "internalApiKey": []
+                    }
+                ]
+            }
+        },
+        "/api/internal/auth/check": {
             "post": {
                 "tags": [
-                    "Users"
+                    "Auth (Internal)"
                 ],
-                "summary": "Authorize user by email and password",
-                "operationId": "5430ca714b6c0dd043567201a7060b76",
+                "summary": "Verify user credentials (internal)",
+                "operationId": "f6b7b92b5e7d44c022e19f5a292e5fcb",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -214,11 +476,10 @@
                                 "properties": {
                                     "email": {
                                         "type": "string",
-                                        "example": "john@example.com"
+                                        "format": "email"
                                     },
                                     "password": {
-                                        "type": "string",
-                                        "example": "P@ssw0rd!"
+                                        "type": "string"
                                     }
                                 },
                                 "type": "object"
@@ -228,38 +489,17 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Authorized",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "authorised": {
-                                            "type": "boolean",
-                                            "example": true
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Credentials valid"
                     },
-                    "403": {
-                        "description": "Unauthorized",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "authorised": {
-                                            "type": "boolean",
-                                            "example": false
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                    "401": {
+                        "description": "Invalid credentials"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "internalApiKey": []
+                    }
+                ]
             }
         }
     },
@@ -281,6 +521,15 @@
                         "type": "string",
                         "example": "john@example.com"
                     },
+                    "roles": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [
+                            "reader"
+                        ]
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time"
@@ -292,12 +541,36 @@
                 },
                 "type": "object"
             }
+        },
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            },
+            "internalApiKey": {
+                "type": "apiKey",
+                "name": "X-Internal-Api-Key",
+                "in": "header"
+            }
         }
     },
     "tags": [
         {
+            "name": "Roles",
+            "description": "Roles"
+        },
+        {
             "name": "Users",
             "description": "Users"
+        },
+        {
+            "name": "Users (Internal)",
+            "description": "Users (Internal)"
+        },
+        {
+            "name": "Auth (Internal)",
+            "description": "Auth (Internal)"
         }
     ]
 }

@@ -9,3 +9,6 @@
 
 # Kubernetes secrets (use secret.example.yaml as template)
 k8s/secret.yaml
+
+# Database backups
+*.sql

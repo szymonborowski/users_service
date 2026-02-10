@@ -14,17 +14,56 @@ use OpenApi\Attributes as OA;
 
 class UserController extends Controller
 {
-
+    #[OA\Get(
+        path: '/api/users',
+        summary: 'List users',
+        security: [['bearerAuth' => []]],
+        tags: ['Users'],
+        parameters: [
+            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 10)),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Paginated list of users', content: new OA\JsonContent(
+                properties: [new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/User'))]
+            )),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+        ]
+    )]
     public function index(Request $request): UserResourceCollection
     {
         return UserResource::collection(UserModel::query()->paginate());
     }
 
+    #[OA\Get(
+        path: '/api/users/{user}',
+        summary: 'Show a user',
+        security: [['bearerAuth' => []]],
+        tags: ['Users'],
+        parameters: [new OA\Parameter(name: 'user', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'User details', content: new OA\JsonContent(ref: '#/components/schemas/User')),
+            new OA\Response(response: 404, description: 'User not found'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+        ]
+    )]
     public function show(UserModel $user): UserResource
     {
         return new UserResource($user);
     }
 
+    #[OA\Get(
+        path: '/api/internal/users/{id}',
+        summary: 'Show a user by ID (internal)',
+        security: [['internalApiKey' => []]],
+        tags: ['Users (Internal)'],
+        parameters: [new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'User details'),
+            new OA\Response(response: 404, description: 'User not found'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+        ]
+    )]
     public function showById(int $id): JsonResponse
     {
         $user = UserModel::with('roles')->find($id);
@@ -44,6 +83,26 @@ class UserController extends Controller
         ], Response::HTTP_OK);
     }
 
+    #[OA\Put(
+        path: '/api/internal/users/{id}',
+        summary: 'Update a user by ID (internal)',
+        security: [['internalApiKey' => []]],
+        tags: ['Users (Internal)'],
+        parameters: [new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'name', type: 'string', maxLength: 255),
+                new OA\Property(property: 'email', type: 'string', format: 'email'),
+                new OA\Property(property: 'password', type: 'string', minLength: 8),
+            ]
+        )),
+        responses: [
+            new OA\Response(response: 200, description: 'User updated'),
+            new OA\Response(response: 404, description: 'User not found'),
+            new OA\Response(response: 422, description: 'Validation error'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+        ]
+    )]
     public function updateById(int $id, Request $request): JsonResponse
     {
         $user = UserModel::with('roles')->find($id);
@@ -74,6 +133,26 @@ class UserController extends Controller
         ], Response::HTTP_OK);
     }
 
+    #[OA\Put(
+        path: '/api/users/{user}',
+        summary: 'Update a user',
+        security: [['bearerAuth' => []]],
+        tags: ['Users'],
+        parameters: [new OA\Parameter(name: 'user', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'name', type: 'string', maxLength: 255),
+                new OA\Property(property: 'email', type: 'string', format: 'email'),
+                new OA\Property(property: 'password', type: 'string', minLength: 8),
+            ]
+        )),
+        responses: [
+            new OA\Response(response: 200, description: 'User updated'),
+            new OA\Response(response: 404, description: 'User not found'),
+            new OA\Response(response: 422, description: 'Validation error'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+        ]
+    )]
     public function update(UserModel $user): JsonResponse
     {
         $validated = request()->validate([
@@ -94,6 +173,18 @@ class UserController extends Controller
         ], Response::HTTP_OK);
     }
 
+    #[OA\Delete(
+        path: '/api/users/{user}',
+        summary: 'Delete a user',
+        security: [['bearerAuth' => []]],
+        tags: ['Users'],
+        parameters: [new OA\Parameter(name: 'user', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 204, description: 'User deleted'),
+            new OA\Response(response: 404, description: 'User not found'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+        ]
+    )]
     public function destroy(UserModel $user): JsonResponse
     {
         UserModel::query()->where('id', $user->id)->delete();
@@ -101,6 +192,23 @@ class UserController extends Controller
         return response()->json(null, Response::HTTP_NO_CONTENT);
     }
 
+    #[OA\Post(
+        path: '/api/internal/auth/check',
+        summary: 'Verify user credentials (internal)',
+        security: [['internalApiKey' => []]],
+        tags: ['Auth (Internal)'],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['email', 'password'],
+            properties: [
+                new OA\Property(property: 'email', type: 'string', format: 'email'),
+                new OA\Property(property: 'password', type: 'string'),
+            ]
+        )),
+        responses: [
+            new OA\Response(response: 200, description: 'Credentials valid'),
+            new OA\Response(response: 401, description: 'Invalid credentials'),
+        ]
+    )]
     public function authorize(Request $request): JsonResponse
     {
         $request->validate([
