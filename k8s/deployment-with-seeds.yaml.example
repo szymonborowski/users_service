@@ -21,7 +21,7 @@ spec:
       initContainers:
         # 1. Copy public files (existing)
         - name: copy-public
-          image: ghcr.io/decybell/microservices-users:v0.0.3
+          image: ghcr.io/szymonborowski/microservices-users:v0.0.3
           command: ["sh", "-c", "cp -r /var/www/html/public/. /shared/public/"]
           securityContext:
             runAsUser: 0
@@ -31,7 +31,7 @@ spec:
 
         # 2. Run migrations and seeds (NEW)
         - name: migrate-and-seed
-          image: ghcr.io/decybell/microservices-users:v0.0.3
+          image: ghcr.io/szymonborowski/microservices-users:v0.0.3
           command:
             - sh
             - -c
@@ -58,7 +58,7 @@ spec:
 
       containers:
         - name: php-fpm
-          image: ghcr.io/decybell/microservices-users:v0.0.3
+          image: ghcr.io/szymonborowski/microservices-users:v0.0.3
           ports:
             - containerPort: 9000
               protocol: TCP
