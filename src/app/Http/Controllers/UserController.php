@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection as UserResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Hash;
 use OpenApi\Attributes as OA;
 
 class UserController extends Controller
