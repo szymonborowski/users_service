@@ -53,6 +53,46 @@ class UserController extends Controller
         return new UserResource($user);
     }
 
+    #[OA\Post(
+        path: '/api/users',
+        summary: 'Create a user',
+        security: [['bearerAuth' => []], ['internalApiKey' => []]],
+        tags: ['Users'],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['name', 'email', 'password'],
+            properties: [
+                new OA\Property(property: 'name', type: 'string', maxLength: 255),
+                new OA\Property(property: 'email', type: 'string', format: 'email'),
+                new OA\Property(property: 'password', type: 'string', minLength: 8),
+            ]
+        )),
+        responses: [
+            new OA\Response(response: 201, description: 'User created', content: new OA\JsonContent(ref: '#/components/schemas/User')),
+            new OA\Response(response: 422, description: 'Validation error'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+        ]
+    )]
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8'],
+        ]);
+
+        $user = UserModel::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        UserDataChanged::dispatch($user, 'created');
+
+        return (new UserResource($user->load('roles')))
+            ->response()
+            ->setStatusCode(Response::HTTP_CREATED);
+    }
+
     #[OA\Get(
         path: '/api/internal/users/{id}',
         summary: 'Show a user by ID (internal)',
@@ -189,6 +229,31 @@ class UserController extends Controller
     public function destroy(UserModel $user): JsonResponse
     {
         UserModel::query()->where('id', $user->id)->delete();
+
+        return response()->json(null, Response::HTTP_NO_CONTENT);
+    }
+
+    #[OA\Delete(
+        path: '/api/internal/users/{id}',
+        summary: 'Delete a user by ID (internal)',
+        security: [['internalApiKey' => []]],
+        tags: ['Users (Internal)'],
+        parameters: [new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 204, description: 'User deleted'),
+            new OA\Response(response: 404, description: 'User not found'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+        ]
+    )]
+    public function destroyById(int $id): JsonResponse
+    {
+        $user = UserModel::query()->find($id);
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $user->delete();
 
         return response()->json(null, Response::HTTP_NO_CONTENT);
     }
