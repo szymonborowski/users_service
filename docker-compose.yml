@@ -1,6 +1,5 @@
 services:
   users-app:
-    container_name: users-app
     build:
       context: .
       dockerfile: docker/dev/php/Dockerfile
@@ -25,7 +24,6 @@ services:
       - microservices
 
   users-nginx:
-    container_name: users-nginx
     image: nginx:1.27
     volumes:
       - ./src:/var/www/html
@@ -51,7 +49,6 @@ services:
       - microservices
 
   users-db:
-    container_name: users-db
     image: mysql:8
     ports:
       - "127.0.0.1:3307:3306"

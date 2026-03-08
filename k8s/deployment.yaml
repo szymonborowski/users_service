@@ -23,6 +23,7 @@ spec:
       initContainers:
         - name: copy-public
           image: ghcr.io/szymonborowski/microservices-users:v0.0.3
+          imagePullPolicy: Never
           command: ["sh", "-c", "cp -r /var/www/html/public/. /shared/public/"]
           securityContext:
             runAsUser: 0
@@ -31,6 +32,7 @@ spec:
               mountPath: /shared/public
         - name: migrate-and-seed
           image: ghcr.io/szymonborowski/microservices-users:v0.0.3
+          imagePullPolicy: Never
           command:
             - sh
             - -c
@@ -55,6 +57,7 @@ spec:
       containers:
         - name: php-fpm
           image: ghcr.io/szymonborowski/microservices-users:v0.0.3
+          imagePullPolicy: Never
           ports:
             - containerPort: 9000
               protocol: TCP
