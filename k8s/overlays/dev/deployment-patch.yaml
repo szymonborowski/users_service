@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: users-app
+  namespace: portfolio
+spec:
+  template:
+    spec:
+      imagePullSecrets: []
+      initContainers:
+        - name: copy-public
+          imagePullPolicy: Never
+        - name: migrate
+          imagePullPolicy: Never
+      containers:
+        - name: php-fpm
+          imagePullPolicy: Never

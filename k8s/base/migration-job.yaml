@@ -14,9 +14,11 @@ spec:
         app.kubernetes.io/name: users-migration
     spec:
       restartPolicy: OnFailure
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: migrate
-          image: ghcr.io/szymonborowski/microservices-users:v0.0.1
+          image: ghcr.io/szymonborowski/portfolio-users:v1.0.0
           imagePullPolicy: Never
           command: ["php", "artisan", "migrate", "--force"]
           envFrom:
