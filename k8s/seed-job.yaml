@@ -1,0 +1,50 @@
+# =============================================================================
+# Users — jednorazowy seed Job
+# Tworzy role (admin, user) i domyślnego użytkownika admin.
+#
+# Uruchomienie (raz, przy pierwszym setupie klastra):
+#   kubectl apply -f users/k8s/seed-job.yaml -n portfolio
+#   kubectl wait --for=condition=complete job/users-seed -n portfolio --timeout=120s
+#   kubectl delete -f users/k8s/seed-job.yaml -n portfolio
+# =============================================================================
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: users-seed
+  namespace: portfolio
+  labels:
+    app.kubernetes.io/name: users
+    app.kubernetes.io/component: seed
+    app.kubernetes.io/part-of: portfolio
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: seed
+          image: ghcr.io/szymonborowski/portfolio-users:sha-latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              echo "Seeding roles..."
+              php artisan db:seed --class=RolesSeeder --force
+              echo "Seeding admin user..."
+              php artisan db:seed --class=UsersSeeder --force
+              echo "Done."
+          envFrom:
+            - configMapRef:
+                name: users-config
+            - secretRef:
+                name: users-secret
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 10m
+              memory: 128Mi

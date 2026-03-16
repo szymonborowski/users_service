@@ -23,25 +23,23 @@ spec:
       initContainers:
         - name: copy-public
           image: ghcr.io/szymonborowski/portfolio-users:v0.0.5
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           command: ["sh", "-c", "cp -r /var/www/html/public/. /shared/public/"]
           securityContext:
             runAsUser: 0
           volumeMounts:
             - name: public-files
               mountPath: /shared/public
-        - name: migrate-and-seed
+        - name: migrate
           image: ghcr.io/szymonborowski/portfolio-users:v0.0.5
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           command:
             - sh
             - -c
             - |
               echo "Running migrations..."
               php artisan migrate --force
-              echo "Running seeds..."
-              php artisan db:seed --force
-              echo "Database initialization complete!"
+              echo "Migrations complete!"
           envFrom:
             - configMapRef:
                 name: users-config
@@ -58,7 +56,7 @@ spec:
       containers:
         - name: php-fpm
           image: ghcr.io/szymonborowski/portfolio-users:v0.0.5
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 9000
               protocol: TCP
