@@ -22,7 +22,7 @@ spec:
       terminationGracePeriodSeconds: 30
       initContainers:
         - name: copy-public
-          image: ghcr.io/szymonborowski/microservices-users:v0.0.3
+          image: ghcr.io/szymonborowski/portfolio-users:v0.0.5
           imagePullPolicy: Never
           command: ["sh", "-c", "cp -r /var/www/html/public/. /shared/public/"]
           securityContext:
@@ -31,7 +31,7 @@ spec:
             - name: public-files
               mountPath: /shared/public
         - name: migrate-and-seed
-          image: ghcr.io/szymonborowski/microservices-users:v0.0.3
+          image: ghcr.io/szymonborowski/portfolio-users:v0.0.5
           imagePullPolicy: Never
           command:
             - sh
@@ -49,14 +49,15 @@ spec:
                 name: users-secret
           resources:
             limits:
-              cpu: 200m
-              memory: 256Mi
+              memory: 768Mi
             requests:
-              cpu: 100m
+              cpu: 10m
               memory: 128Mi
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: php-fpm
-          image: ghcr.io/szymonborowski/microservices-users:v0.0.3
+          image: ghcr.io/szymonborowski/portfolio-users:v0.0.5
           imagePullPolicy: Never
           ports:
             - containerPort: 9000
@@ -78,11 +79,10 @@ spec:
             periodSeconds: 5
           resources:
             requests:
-              cpu: 100m
+              cpu: 10m
               memory: 128Mi
             limits:
-              cpu: 500m
-              memory: 512Mi
+              memory: 768Mi
         - name: nginx
           image: nginx:1.27-alpine
           ports:
@@ -113,10 +113,9 @@ spec:
             periodSeconds: 5
           resources:
             requests:
-              cpu: 50m
+              cpu: 10m
               memory: 64Mi
             limits:
-              cpu: 200m
               memory: 128Mi
       volumes:
         - name: public-files
