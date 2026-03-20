@@ -19,7 +19,7 @@ data:
   RABBITMQ_PORT: "5672"
   RABBITMQ_VHOST: "/"
   # Internal API key for service-to-service communication
-  INTERNAL_API_KEY: "internal-api-key-change-in-production"
+  INTERNAL_API_KEY: "ce96caad66109fcae01b5206b5ad155af8b46207f258e27ea0c4c30814da86b7"
 ---
 apiVersion: v1
 kind: ConfigMap
