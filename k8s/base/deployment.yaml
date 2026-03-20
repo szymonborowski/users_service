@@ -22,7 +22,7 @@ spec:
       terminationGracePeriodSeconds: 30
       initContainers:
         - name: copy-public
-          image: ghcr.io/szymonborowski/portfolio-users:v0.0.6
+          image: ghcr.io/szymonborowski/portfolio-users:v0.0.7
           imagePullPolicy: IfNotPresent
           command: ["sh", "-c", "cp -r /var/www/html/public/. /shared/public/"]
           securityContext:
@@ -31,7 +31,7 @@ spec:
             - name: public-files
               mountPath: /shared/public
         - name: migrate
-          image: ghcr.io/szymonborowski/portfolio-users:v0.0.6
+          image: ghcr.io/szymonborowski/portfolio-users:v0.0.7
           imagePullPolicy: IfNotPresent
           command:
             - sh
@@ -55,7 +55,7 @@ spec:
         - name: ghcr-secret
       containers:
         - name: php-fpm
-          image: ghcr.io/szymonborowski/portfolio-users:v0.0.6
+          image: ghcr.io/szymonborowski/portfolio-users:v0.0.7
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 9000
