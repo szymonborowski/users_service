@@ -9,8 +9,8 @@ RUN groupadd -g ${GID} app \
 RUN apt-get update && apt-get install -y \
     git zip unzip curl libpng-dev libonig-dev libxml2-dev libzip-dev libicu-dev libsqlite3-dev \
     && docker-php-ext-install pdo_mysql pdo_sqlite mbstring zip exif pcntl bcmath intl sockets \
-    && pecl install pcov xdebug \
-    && docker-php-ext-enable pcov xdebug
+    && pecl install redis pcov xdebug \
+    && docker-php-ext-enable redis pcov xdebug
 
 RUN printf '[xdebug]\n\
 xdebug.mode=${XDEBUG_MODE:-off}\n\
