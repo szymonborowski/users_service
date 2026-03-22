@@ -20,6 +20,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./src:/var/www/html
+      - users_vendor:/var/www/html/vendor
     depends_on:
       users-db:
         condition: service_healthy
@@ -102,3 +103,4 @@ networks:
 
 volumes:
   users_db_data:
+  users_vendor:
