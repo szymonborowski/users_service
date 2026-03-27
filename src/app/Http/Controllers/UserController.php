@@ -61,7 +61,7 @@ class UserController extends Controller
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
             required: ['name', 'email', 'password'],
             properties: [
-                new OA\Property(property: 'name', type: 'string', maxLength: 255),
+                new OA\Property(property: 'name', type: 'string', minLength: 3, maxLength: 32),
                 new OA\Property(property: 'email', type: 'string', format: 'email'),
                 new OA\Property(property: 'password', type: 'string', minLength: 8),
             ]
@@ -75,7 +75,7 @@ class UserController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'min:3', 'max:32', 'regex:/^[a-zA-Z0-9_-]+$/', 'unique:users,name'],
             'email' => ['required', 'email', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
         ]);
@@ -85,6 +85,8 @@ class UserController extends Controller
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
         ]);
+
+        $user->assignRole(Role::READER);
 
         UserDataChanged::dispatch($user, 'created');
 
@@ -155,8 +157,8 @@ class UserController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => ['sometimes', 'string', 'max:255'],
-            'email' => ['sometimes', 'email', 'unique:users,email,' . $id],
+            'name' => ['sometimes', 'string', 'min:3', 'max:32', 'regex:/^[a-zA-Z0-9_-]+$/', "unique:users,name,$id"],
+            'email' => ['sometimes', 'email', "unique:users,email,$id"],
             'password' => ['sometimes', 'string', 'min:8'],
         ]);
 
@@ -197,8 +199,8 @@ class UserController extends Controller
     public function update(UserModel $user): JsonResponse
     {
         $validated = request()->validate([
-            'name' => ['sometimes', 'string', 'max:255'],
-            'email' => ['sometimes', 'email', 'unique:users,email,' . $user->id],
+            'name' => ['sometimes', 'string', 'min:3', 'max:32', 'regex:/^[a-zA-Z0-9_-]+$/', "unique:users,name,{$user->id}"],
+            'email' => ['sometimes', 'email', "unique:users,email,{$user->id}"],
             'password' => ['sometimes', 'string', 'min:8'],
         ]);
 

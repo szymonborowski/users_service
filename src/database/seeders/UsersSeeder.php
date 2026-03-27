@@ -14,25 +14,6 @@ class UsersSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create frontend user (regular user with READER role)
-        $frontendUser = User::updateOrCreate(
-            ['email' => 'szymon.borowski@example.com'],
-            [
-                'name' => 'Szymon Borowski',
-                'email' => 'szymon.borowski@example.com',
-                'password' => Hash::make('Admin,123'),
-                'email_verified_at' => now(),
-            ]
-        );
-
-        // Assign READER role to frontend user
-        $readerRole = Role::where('name', Role::READER)->first();
-        if ($readerRole && !$frontendUser->hasRole(Role::READER)) {
-            $frontendUser->assignRole(Role::READER);
-        }
-
-        $this->command->info("✓ Frontend user created: {$frontendUser->email}");
-
         // Create admin user
         $adminUser = User::updateOrCreate(
             ['email' => 'admin@example.com'],
