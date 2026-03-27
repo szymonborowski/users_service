@@ -22,6 +22,7 @@ class AuthServiceProvider extends ServiceProvider
     {
         Passport::tokensCan([
             'users.read'  => 'Read users data',
+            'users.write' => 'Create and modify users',
             'users.auth'  => 'Authenticate users',
         ]);
 

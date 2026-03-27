@@ -196,9 +196,9 @@ class UserController extends Controller
             new OA\Response(response: 401, description: 'Unauthenticated'),
         ]
     )]
-    public function update(UserModel $user): JsonResponse
+    public function update(UserModel $user, Request $request): JsonResponse
     {
-        $validated = request()->validate([
+        $validated = $request->validate([
             'name' => ['sometimes', 'string', 'min:3', 'max:32', 'regex:/^[a-zA-Z0-9_-]+$/', "unique:users,name,{$user->id}"],
             'email' => ['sometimes', 'email', "unique:users,email,{$user->id}"],
             'password' => ['sometimes', 'string', 'min:8'],
@@ -230,7 +230,7 @@ class UserController extends Controller
     )]
     public function destroy(UserModel $user): JsonResponse
     {
-        UserModel::query()->where('id', $user->id)->delete();
+        $user->delete();
 
         return response()->json(null, Response::HTTP_NO_CONTENT);
     }
@@ -255,7 +255,10 @@ class UserController extends Controller
             return response()->json(['message' => 'User not found'], Response::HTTP_NOT_FOUND);
         }
 
+        $user->load('roles');
         $user->delete();
+
+        UserDataChanged::dispatch($user, 'deleted');
 
         return response()->json(null, Response::HTTP_NO_CONTENT);
     }

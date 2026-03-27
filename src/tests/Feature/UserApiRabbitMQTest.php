@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Events\UserDataChanged;
 use App\Models\User;
 use App\Services\RabbitMQService;
+use Database\Seeders\RolesSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Mockery;
@@ -18,6 +19,7 @@ class UserApiRabbitMQTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(RolesSeeder::class);
 
         // Disable only auth so route model binding (SubstituteBindings) still runs for PUT /users/{user}
         $this->withoutMiddleware([
@@ -32,8 +34,8 @@ class UserApiRabbitMQTest extends TestCase
 
     protected function tearDown(): void
     {
-        Mockery::close();
         parent::tearDown();
+        Mockery::close();
     }
 
     #[Test]
@@ -42,7 +44,7 @@ class UserApiRabbitMQTest extends TestCase
         Event::fake([UserDataChanged::class]);
 
         $payload = [
-            'name' => 'Test User',
+            'name' => 'TestUser',
             'email' => 'test@example.com',
             'password' => 'Password123!',
         ];
@@ -61,13 +63,13 @@ class UserApiRabbitMQTest extends TestCase
     public function it_dispatches_user_updated_event_when_updating_user()
     {
         $user = User::factory()->create([
-            'name' => 'Original Name',
+            'name' => 'OriginalUser',
         ]);
 
         Event::fake([UserDataChanged::class]);
 
         $response = $this->putJson("/api/users/{$user->id}", [
-            'name' => 'Updated Name',
+            'name' => 'UpdatedUser',
         ]);
 
         $response->assertOk();
@@ -75,22 +77,28 @@ class UserApiRabbitMQTest extends TestCase
         Event::assertDispatched(UserDataChanged::class, function ($event) use ($user) {
             return $event->action === 'updated'
                 && $event->user->id === $user->id
-                && $event->user->name === 'Updated Name';
+                && $event->user->name === 'UpdatedUser';
         });
     }
 
     #[Test]
-    public function it_does_not_dispatch_event_when_deleting_user()
+    public function it_dispatches_deleted_event_when_deleting_user_via_internal_api()
     {
+        config(['services.internal.api_key' => 'test-internal-key']);
+
         Event::fake([UserDataChanged::class]);
 
         $user = User::factory()->create();
 
-        $response = $this->deleteJson("/api/users/{$user->id}");
+        $response = $this->deleteJson("/api/internal/users/{$user->id}", [], [
+            'X-Internal-Api-Key' => 'test-internal-key',
+        ]);
 
         $response->assertNoContent();
 
-        Event::assertNotDispatched(UserDataChanged::class);
+        Event::assertDispatched(UserDataChanged::class, function ($event) use ($user) {
+            return $event->action === 'deleted' && $event->user->id === $user->id;
+        });
     }
 
     #[Test]
@@ -115,7 +123,7 @@ class UserApiRabbitMQTest extends TestCase
         $this->app->instance(RabbitMQService::class, $mockRabbitMQ);
 
         $payload = [
-            'name' => 'RabbitMQ Test User',
+            'name' => 'RabbitMQ_User',
             'email' => 'rabbitmq@example.com',
             'password' => 'Password123!',
         ];
@@ -124,7 +132,7 @@ class UserApiRabbitMQTest extends TestCase
 
         $this->assertTrue($publishCalled, 'RabbitMQ publish should be called');
         $this->assertEquals('created', $publishedData['action']);
-        $this->assertEquals('RabbitMQ Test User', $publishedData['user']['name']);
+        $this->assertEquals('RabbitMQ_User', $publishedData['user']['name']);
         $this->assertEquals('rabbitmq@example.com', $publishedData['user']['email']);
     }
 
@@ -132,7 +140,7 @@ class UserApiRabbitMQTest extends TestCase
     public function it_publishes_updated_user_data_to_rabbitmq()
     {
         $user = User::factory()->create([
-            'name' => 'Old Name',
+            'name' => 'OldUser',
             'email' => 'old@example.com',
         ]);
 
@@ -152,10 +160,10 @@ class UserApiRabbitMQTest extends TestCase
 
         $this->app->instance(RabbitMQService::class, $mockRabbitMQ);
 
-        $this->putJson("/api/users/{$user->id}", ['name' => 'New Name']);
+        $this->putJson("/api/users/{$user->id}", ['name' => 'NewUser']);
 
         $this->assertEquals('updated', $publishedData['action']);
-        $this->assertEquals('New Name', $publishedData['user']['name']);
+        $this->assertEquals('NewUser', $publishedData['user']['name']);
         $this->assertEquals('old@example.com', $publishedData['user']['email']);
     }
 }

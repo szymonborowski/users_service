@@ -3,8 +3,6 @@
 namespace App\ValueObjects\User;
 
 use Illuminate\Support\Facades\Validator;
-use PHPUnit\Framework\AssertionFailedError;
-
 final class Email
 {
     /**
@@ -18,7 +16,7 @@ final class Email
         );
 
         if ($validator->fails()) {
-            throw new AssertionFailedError('Invalid email');
+            throw new \InvalidArgumentException("Invalid email: {$this->email}");
         }
 
     }

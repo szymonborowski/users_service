@@ -29,7 +29,7 @@ class EmailTest extends TestCase
     #[Test]
     public function throws_on_invalid_format(): void
     {
-        $this->expectException(\PHPUnit\Framework\AssertionFailedError::class);
+        $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid email');
 
         new Email('not-an-email');
@@ -38,7 +38,7 @@ class EmailTest extends TestCase
     #[Test]
     public function throws_on_empty_string(): void
     {
-        $this->expectException(\PHPUnit\Framework\AssertionFailedError::class);
+        $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid email');
 
         new Email('');
@@ -47,7 +47,7 @@ class EmailTest extends TestCase
     #[Test]
     public function throws_on_missing_at(): void
     {
-        $this->expectException(\PHPUnit\Framework\AssertionFailedError::class);
+        $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid email');
 
         new Email('userexample.com');

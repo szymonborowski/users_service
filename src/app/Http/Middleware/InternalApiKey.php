@@ -13,7 +13,7 @@ class InternalApiKey
         $apiKey = $request->header('X-Internal-Api-Key');
         $expectedKey = config('services.internal.api_key');
 
-        if (!$apiKey || !$expectedKey || $apiKey !== $expectedKey) {
+        if (!$apiKey || !$expectedKey || !hash_equals($expectedKey, $apiKey)) {
             return response()->json([
                 'message' => 'Unauthorized',
             ], Response::HTTP_UNAUTHORIZED);

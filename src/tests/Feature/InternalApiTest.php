@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Services\RabbitMQService;
+use Database\Seeders\RolesSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Mockery;
@@ -17,6 +18,7 @@ class InternalApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(RolesSeeder::class);
 
         $mockRabbitMQ = Mockery::mock(RabbitMQService::class);
         $mockRabbitMQ->shouldReceive('publish')->andReturn(null);
@@ -25,8 +27,8 @@ class InternalApiTest extends TestCase
 
     protected function tearDown(): void
     {
-        Mockery::close();
         parent::tearDown();
+        Mockery::close();
     }
 
     #[Test]
@@ -144,7 +146,7 @@ class InternalApiTest extends TestCase
         config(['services.internal.api_key' => 'test-api-key']);
 
         $response = $this->postJson('/api/internal/users', [
-            'name' => 'New User',
+            'name' => 'NewUser',
             'email' => 'newuser@example.com',
             'password' => 'password123',
         ], [
@@ -154,10 +156,12 @@ class InternalApiTest extends TestCase
         $response
             ->assertCreated()
             ->assertJsonStructure([
-                'id',
-                'name',
-                'email',
-                'created_at',
+                'data' => [
+                    'id',
+                    'name',
+                    'email',
+                    'created_at',
+                ],
             ]);
 
         $this->assertDatabaseHas('users', [
@@ -170,10 +174,10 @@ class InternalApiTest extends TestCase
     {
         config(['services.internal.api_key' => 'test-api-key']);
 
-        $user = User::factory()->create(['name' => 'Original Name']);
+        $user = User::factory()->create(['name' => 'OriginalUser']);
 
         $response = $this->putJson("/api/internal/users/{$user->id}", [
-            'name' => 'Updated Name',
+            'name' => 'UpdatedUser',
         ], [
             'X-Internal-Api-Key' => 'test-api-key',
         ]);
@@ -181,13 +185,13 @@ class InternalApiTest extends TestCase
         $response->assertOk()
             ->assertJson([
                 'id' => $user->id,
-                'name' => 'Updated Name',
+                'name' => 'UpdatedUser',
                 'email' => $user->email,
             ]);
 
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
-            'name' => 'Updated Name',
+            'name' => 'UpdatedUser',
         ]);
     }
 

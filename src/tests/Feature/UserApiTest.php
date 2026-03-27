@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Services\RabbitMQService;
+use Database\Seeders\RolesSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
@@ -16,6 +17,7 @@ class UserApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(RolesSeeder::class);
 
         $this->withoutMiddleware([
             \Illuminate\Auth\Middleware\Authenticate::class,
@@ -29,8 +31,8 @@ class UserApiTest extends TestCase
 
     protected function tearDown(): void
     {
-        Mockery::close();
         parent::tearDown();
+        Mockery::close();
     }
 
     #[Test]
@@ -67,7 +69,7 @@ class UserApiTest extends TestCase
     public function it_creates_user()
     {
         $payload = [
-            'name' => 'Test User',
+            'name' => 'TestUser',
             'email' => 'test@example.com',
             'password' => 'Password123!',
         ];
@@ -91,7 +93,7 @@ class UserApiTest extends TestCase
         $user = User::factory()->create();
 
         $payload = [
-            'name' => 'Updated Name',
+            'name' => 'UpdatedUser',
         ];
 
         $response = $this->putJson("/api/users/{$user->id}", $payload);
@@ -100,7 +102,7 @@ class UserApiTest extends TestCase
 
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
-            'name' => 'Updated Name',
+            'name' => 'UpdatedUser',
         ]);
     }
 

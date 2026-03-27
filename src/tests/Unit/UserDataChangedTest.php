@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Events\UserDataChanged;
+use App\Listeners\PublishUserDataChanged;
 use App\Models\User;
 use App\Services\RabbitMQService;
 use Carbon\Carbon;
@@ -18,38 +19,48 @@ class UserDataChangedTest extends TestCase
         parent::tearDown();
     }
 
+    private function mockRabbitMQ(callable $callback = null): RabbitMQService
+    {
+        $mock = Mockery::mock(RabbitMQService::class);
+        $expectation = $mock->shouldReceive('publish')->once();
+
+        if ($callback) {
+            $expectation->andReturnUsing($callback);
+        }
+
+        return $mock;
+    }
+
+    private function dispatch(User $user, string $action, RabbitMQService $rabbitMQ): void
+    {
+        $listener = new PublishUserDataChanged($rabbitMQ);
+        $listener->handle(new UserDataChanged($user, $action));
+    }
+
     #[Test]
     public function it_publishes_user_created_event_with_correct_data()
     {
-        $publishedData = null;
-        $publishedExchange = null;
-        $publishedRoutingKey = null;
+        $publishedData = $publishedExchange = $publishedRoutingKey = null;
 
-        $mockRabbitMQ = Mockery::mock(RabbitMQService::class);
-        $mockRabbitMQ->shouldReceive('publish')
-            ->once()
-            ->andReturnUsing(function ($exchange, $routingKey, $data) use (&$publishedExchange, &$publishedRoutingKey, &$publishedData) {
-                $publishedExchange = $exchange;
-                $publishedRoutingKey = $routingKey;
-                $publishedData = $data;
-            });
+        $rabbitMQ = $this->mockRabbitMQ(function ($exchange, $routingKey, $data) use (
+            &$publishedExchange, &$publishedRoutingKey, &$publishedData
+        ) {
+            $publishedExchange   = $exchange;
+            $publishedRoutingKey = $routingKey;
+            $publishedData       = $data;
+        });
 
-        $this->app->instance(RabbitMQService::class, $mockRabbitMQ);
-
-        $user = new User([
-            'name' => 'John Doe',
-            'email' => 'john@example.com',
-        ]);
-        $user->id = 1;
+        $user = new User(['name' => 'John_Doe', 'email' => 'john@example.com']);
+        $user->id         = 1;
         $user->created_at = Carbon::create(2026, 1, 15, 10, 30, 0);
 
-        UserDataChanged::dispatch($user, 'created');
+        $this->dispatch($user, 'created', $rabbitMQ);
 
         $this->assertEquals(config('rabbitmq.exchanges.users'), $publishedExchange);
         $this->assertEquals('user.created', $publishedRoutingKey);
         $this->assertEquals('created', $publishedData['action']);
         $this->assertEquals(1, $publishedData['user']['id']);
-        $this->assertEquals('John Doe', $publishedData['user']['name']);
+        $this->assertEquals('John_Doe', $publishedData['user']['name']);
         $this->assertEquals('john@example.com', $publishedData['user']['email']);
         $this->assertArrayHasKey('created_at', $publishedData['user']);
         $this->assertArrayHasKey('timestamp', $publishedData);
@@ -60,22 +71,35 @@ class UserDataChangedTest extends TestCase
     {
         $publishedRoutingKey = null;
 
-        $mockRabbitMQ = Mockery::mock(RabbitMQService::class);
-        $mockRabbitMQ->shouldReceive('publish')
-            ->once()
-            ->andReturnUsing(function ($exchange, $routingKey, $data) use (&$publishedRoutingKey) {
-                $publishedRoutingKey = $routingKey;
-            });
-
-        $this->app->instance(RabbitMQService::class, $mockRabbitMQ);
+        $rabbitMQ = $this->mockRabbitMQ(function ($exchange, $routingKey, $data) use (&$publishedRoutingKey) {
+            $publishedRoutingKey = $routingKey;
+        });
 
         $user = new User(['name' => 'Test', 'email' => 'test@example.com']);
-        $user->id = 1;
+        $user->id         = 1;
         $user->created_at = now();
 
-        UserDataChanged::dispatch($user, 'updated');
+        $this->dispatch($user, 'updated', $rabbitMQ);
 
         $this->assertEquals('user.updated', $publishedRoutingKey);
+    }
+
+    #[Test]
+    public function it_publishes_user_deleted_event_with_correct_routing_key()
+    {
+        $publishedRoutingKey = null;
+
+        $rabbitMQ = $this->mockRabbitMQ(function ($exchange, $routingKey, $data) use (&$publishedRoutingKey) {
+            $publishedRoutingKey = $routingKey;
+        });
+
+        $user = new User(['name' => 'Test', 'email' => 'test@example.com']);
+        $user->id         = 1;
+        $user->created_at = now();
+
+        $this->dispatch($user, 'deleted', $rabbitMQ);
+
+        $this->assertEquals('user.deleted', $publishedRoutingKey);
     }
 
     #[Test]
@@ -83,25 +107,16 @@ class UserDataChangedTest extends TestCase
     {
         $publishedData = null;
 
-        $mockRabbitMQ = Mockery::mock(RabbitMQService::class);
-        $mockRabbitMQ->shouldReceive('publish')
-            ->once()
-            ->andReturnUsing(function ($exchange, $routingKey, $data) use (&$publishedData) {
-                $publishedData = $data;
-            });
+        $rabbitMQ = $this->mockRabbitMQ(function ($exchange, $routingKey, $data) use (&$publishedData) {
+            $publishedData = $data;
+        });
 
-        $this->app->instance(RabbitMQService::class, $mockRabbitMQ);
+        $user                  = new User(['name' => 'Test_User', 'email' => 'test@example.com', 'password' => bcrypt('secret')]);
+        $user->id              = 1;
+        $user->created_at      = now();
+        $user->remember_token  = 'some-token';
 
-        $user = new User([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => bcrypt('secret-password'),
-        ]);
-        $user->id = 1;
-        $user->created_at = now();
-        $user->remember_token = 'some-token';
-
-        UserDataChanged::dispatch($user, 'created');
+        $this->dispatch($user, 'created', $rabbitMQ);
 
         $this->assertArrayHasKey('id', $publishedData['user']);
         $this->assertArrayHasKey('name', $publishedData['user']);
@@ -116,21 +131,15 @@ class UserDataChangedTest extends TestCase
     {
         $publishedData = null;
 
-        $mockRabbitMQ = Mockery::mock(RabbitMQService::class);
-        $mockRabbitMQ->shouldReceive('publish')
-            ->once()
-            ->andReturnUsing(function ($exchange, $routingKey, $data) use (&$publishedData) {
-                $publishedData = $data;
-            });
+        $rabbitMQ = $this->mockRabbitMQ(function ($exchange, $routingKey, $data) use (&$publishedData) {
+            $publishedData = $data;
+        });
 
-        $this->app->instance(RabbitMQService::class, $mockRabbitMQ);
-
-        $fixedDate = Carbon::create(2026, 1, 15, 10, 30, 0);
         $user = new User(['name' => 'Test', 'email' => 'test@example.com']);
-        $user->id = 1;
-        $user->created_at = $fixedDate;
+        $user->id         = 1;
+        $user->created_at = Carbon::create(2026, 1, 15, 10, 30, 0);
 
-        UserDataChanged::dispatch($user, 'created');
+        $this->dispatch($user, 'created', $rabbitMQ);
 
         $this->assertStringContainsString('2026-01-15', $publishedData['user']['created_at']);
     }
@@ -140,22 +149,17 @@ class UserDataChangedTest extends TestCase
     {
         $publishedData = null;
 
-        $mockRabbitMQ = Mockery::mock(RabbitMQService::class);
-        $mockRabbitMQ->shouldReceive('publish')
-            ->once()
-            ->andReturnUsing(function ($exchange, $routingKey, $data) use (&$publishedData) {
-                $publishedData = $data;
-            });
-
-        $this->app->instance(RabbitMQService::class, $mockRabbitMQ);
+        $rabbitMQ = $this->mockRabbitMQ(function ($exchange, $routingKey, $data) use (&$publishedData) {
+            $publishedData = $data;
+        });
 
         Carbon::setTestNow(Carbon::create(2026, 1, 28, 12, 0, 0));
 
         $user = new User(['name' => 'Test', 'email' => 'test@example.com']);
-        $user->id = 1;
+        $user->id         = 1;
         $user->created_at = now();
 
-        UserDataChanged::dispatch($user, 'created');
+        $this->dispatch($user, 'created', $rabbitMQ);
 
         $this->assertArrayHasKey('timestamp', $publishedData);
         $this->assertStringContainsString('2026-01-28', $publishedData['timestamp']);
