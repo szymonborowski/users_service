@@ -19,7 +19,7 @@ class UserDataChangedTest extends TestCase
         parent::tearDown();
     }
 
-    private function mockRabbitMQ(callable $callback = null): RabbitMQService
+    private function mockRabbitMQ(?callable $callback = null): RabbitMQService
     {
         $mock = Mockery::mock(RabbitMQService::class);
         $expectation = $mock->shouldReceive('publish')->once();
