@@ -11,4 +11,4 @@
 k8s/secret.yaml
 
 # Database backups
-*.sql
+*.sqlsrc/.env.testing
