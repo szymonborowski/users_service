@@ -21,16 +21,13 @@ xdebug.idekey=VSCODE\n' > /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+COPY docker/dev/php/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 WORKDIR /var/www/html
 
-COPY ../../../src .
-
-RUN composer install --no-dev --optimize-autoloader
-
-RUN chown -R www-data:www-data storage bootstrap/cache
-
-RUN php artisan view:clear \
- && php artisan config:clear \
- && php artisan route:clear
+RUN mkdir -p vendor && chown app:app vendor
 
 USER app
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

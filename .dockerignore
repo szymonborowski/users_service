@@ -13,6 +13,7 @@
 
 # Docker dev configs (not needed for deploy build)
 docker/dev
+!docker/dev/php/entrypoint.sh
 
 # IDE and editor
 .idea
