@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version
+        id: version
+        run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/deploy/php/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/portfolio-users:${{ steps.version.outputs.tag }}
+            ghcr.io/${{ github.repository_owner }}/portfolio-users:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Set up Kustomize
+        run: |
+          curl -sL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.6.0/kustomize_v5.6.0_linux_amd64.tar.gz" | tar xz
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Update k8s prod overlay
+        run: |
+          git fetch origin master
+          git checkout master
+          cd k8s/overlays/prod
+          kustomize edit set image \
+            ghcr.io/${{ github.repository_owner }}/portfolio-users:${{ steps.version.outputs.tag }}
+          cd ../../..
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add k8s/overlays/prod/kustomization.yaml
+          git diff --staged --quiet || \
+            git commit -m "chore(k8s): update image to ${{ steps.version.outputs.tag }}"
+          git push origin master
